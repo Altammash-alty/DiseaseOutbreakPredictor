@@ -1,0 +1,20 @@
+model_params:
+  bert_model_name: "bert-base-uncased"
+  embedding_dim: 768
+  lstm_units: [128, 64]
+  dropout_rate: 0.2
+  gnn_hidden_channels: 64
+  num_regions: 10
+  temporal_window: 7 # Days to look back
+  learning_rate: 0.001
+  batch_size: 32
+  epochs: 20
+
+data_params:
+  num_samples: 1000
+  pharmacy_feature_dim: 5
+  outbreak_threshold: 0.5
+
+paths:
+  synthetic_data: "data/generated_dataset/synthetic_outbreak_data.csv"
+  model_save_dir: "saved_models/outbreak_predictor_v1"
