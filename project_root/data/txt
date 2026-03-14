@@ -1,0 +1,3 @@
+python reddit_data_fetcher.py
+python x_data_fetcher.py
+python google_trends_fetcher.py

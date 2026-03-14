@@ -1,33 +1,31 @@
 from pytrends.request import TrendReq
-
-pytrends = TrendReq()
+import json
+import time
 
 SYMPTOMS = [
     "fever",
     "cough",
     "diarrhea",
     "headache",
-    "body pain",
-    "nausea",
-    "fatigue"
+    "nausea"
 ]
 
-CITIES = {
+CITY_STATE = {
     "Delhi": "IN-DL",
+    "Meerut": "IN-UP",
     "Mumbai": "IN-MH",
-    "Bangalore": "IN-KA",
-    "Chennai": "IN-TN",
-    "Kolkata": "IN-WB"
+    "Bangalore": "IN-KA"
 }
-
 
 def fetch_city_trends(city):
 
-    geo_code = CITIES[city]
+    geo_code = CITY_STATE[city]
+
+    pytrends = TrendReq(hl="en-US", tz=330)
 
     pytrends.build_payload(
         SYMPTOMS,
-        timeframe="now 7-d",
+        timeframe="now 1-d",
         geo=geo_code
     )
 
@@ -36,4 +34,16 @@ def fetch_city_trends(city):
     if "isPartial" in data.columns:
         data = data.drop(columns=["isPartial"])
 
-    return data.iloc[-1].to_dict()
+    return {
+        "city": city,
+        "data": data.to_dict(orient="records")
+    }
+
+
+if __name__ == "__main__":
+
+    time.sleep(5)  # small delay to avoid rate limit
+
+    result = fetch_city_trends("Delhi")
+
+    print(json.dumps(result, indent=4))
