@@ -1,8 +1,10 @@
 model_params:
   bert_model_name: "bert-base-uncased"
   embedding_dim: 768
+  lstm_input_dim: 5
   lstm_units: [128, 64]
   dropout_rate: 0.2
+  gnn_node_features: 64
   gnn_hidden_channels: 64
   num_regions: 10
   temporal_window: 7 # Days to look back

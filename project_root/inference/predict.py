@@ -1,8 +1,11 @@
-import tensorflow as tf
+import torch
+import torch.nn as nn
 import numpy as np
 import yaml
 import json
+import os
 from project_root.pipeline.data_preprocessing import DataProcessor
+from project_root.models.outbreak_predictor import OutbreakPredictor
 
 # Load configuration
 with open("project_root/configs/model_config.yaml", "r") as f:
@@ -11,19 +14,28 @@ with open("project_root/configs/model_config.yaml", "r") as f:
 # Global model variable for persistence
 MODEL = None
 PROCESSOR = DataProcessor(model_name=config['model_params']['bert_model_name'])
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_model():
     global MODEL
     if MODEL is None:
-        path = config['paths']['model_save_dir']
-        try:
-            MODEL = tf.keras.models.load_model(path)
-            print("Model loaded successfully.")
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            # For demonstration, we'll initialize a new one if not found
-            from project_root.models.outbreak_predictor import OutbreakPredictor
-            MODEL = OutbreakPredictor(config)
+        save_path = config['paths']['model_save_dir']
+        model_file = os.path.join(save_path, "model.pth")
+        
+        MODEL = OutbreakPredictor(config)
+        
+        if os.path.exists(model_file):
+            try:
+                state_dict = torch.load(model_file, map_location=DEVICE)
+                MODEL.load_state_dict(state_dict)
+                print("Model weights loaded successfully.")
+            except Exception as e:
+                print(f"Error loading weights: {e}")
+        else:
+            print("Model weights not found. Using initialized model.")
+            
+        MODEL.to(DEVICE)
+        MODEL.eval()
     return MODEL
 
 def predict_outbreak(input_json):
@@ -39,26 +51,24 @@ def predict_outbreak(input_json):
         data = json.loads(input_json)
     else:
         data = input_json
-
+    
     # 2. Extract and Prepare Features
-    # Text processing (BERT) - usually pre-processed or handled by a text vectorizer layer
-    # For this prediction, we focus on the temporal and spatial fusion
+    # Pharmacy features for temporal LSTM
+    pharmacy_features = np.array(data.get("pharmacy_features", [0]*config['model_params']['lstm_input_dim'])).astype(np.float32)
     
-    # Prepare temporal features (pharmacy data)
-    # In production, FastAPI would provide the last N days of data
-    pharmacy_features = np.array(data.get("pharmacy_features", [0]*5)).astype(np.float32)
     # Mocking a temporal window (batch, time_steps, features)
-    # Here we simulate that the input contains the current timestamp's features
-    # and we pad/mock the history for the LSTM
     temporal_input = np.tile(pharmacy_features, (1, config['model_params']['temporal_window'], 1))
+    temporal_input = torch.tensor(temporal_input).to(DEVICE)
     
-    # Prepare Graph (Spatial)
-    graph = PROCESSOR.build_graph_tensor(num_regions=config['model_params']['num_regions'])
+    # Prepare Graph Data (Spatial)
+    x_gnn, edge_index = PROCESSOR.build_graph_data(num_regions=config['model_params']['num_regions'])
+    x_gnn = x_gnn.to(DEVICE)
+    edge_index = edge_index.to(DEVICE)
     
     # 3. Model Inference
-    # We repeat graph for the batch size 1
-    prediction = model.predict([temporal_input, graph])
-    probability = float(prediction[0][0])
+    with torch.no_grad():
+        prediction = model(temporal_input, x_gnn, edge_index)
+        probability = float(prediction[0][0].item())
     
     # 4. Determine Risk Level
     risk_level = "LOW"
@@ -79,7 +89,7 @@ if __name__ == "__main__":
     test_input = {
         "search_queries": ["fever symptoms", "body pain"],
         "social_posts": ["Everyone is sick today"],
-        "pharmacy_features": [120, 34, 20, 45, 90],
+        "pharmacy_features": [120, 34, 20, 45, 90, 10], # Match lstm_input_dim
         "region_id": 4,
         "date_index": 180
     }
