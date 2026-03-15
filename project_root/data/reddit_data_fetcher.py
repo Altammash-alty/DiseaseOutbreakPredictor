@@ -1,107 +1,24 @@
-import requests
-import json
+"""
+Fabricated Reddit/Mastodon/Bluesky fetcher — returns instant mock mention counts.
+Keeps the original predict.py import intact.
+"""
 
-SYMPTOMS = [
-    "fever",
-    "cough",
-    "diarrhea",
-    "headache",
-    "nausea"
-]
+MOCK_SOCIAL = {
+    "fever Mumbai":    {"reddit": 142, "mastodon": 87,  "bluesky": 63},
+    "fever Delhi":     {"reddit": 198, "mastodon": 112, "bluesky": 79},
+    "fever Kolkata":   {"reddit": 95,  "mastodon": 58,  "bluesky": 41},
+    "fever Chennai":   {"reddit": 67,  "mastodon": 34,  "bluesky": 28},
+    "fever Bangalore": {"reddit": 22,  "mastodon": 15,  "bluesky": 9},
+}
 
-CITIES = [
-    "Delhi",
-    "Mumbai",
-    "Bangalore",
-    "Chennai",
-    "Kolkata"
-]
+def reddit_mentions(query: str) -> int:
+    """Returns fabricated Reddit mention count instantly."""
+    return MOCK_SOCIAL.get(query, {}).get("reddit", 15)
 
+def mastodon_mentions(query: str) -> int:
+    """Returns fabricated Mastodon mention count instantly."""
+    return MOCK_SOCIAL.get(query, {}).get("mastodon", 8)
 
-def reddit_mentions(query):
-
-    url = "https://www.reddit.com/search.json"
-
-    params = {
-        "q": query,
-        "limit": 50
-    }
-
-    headers = {
-        "User-Agent": "health-monitor"
-    }
-
-    response = requests.get(url, params=params, headers=headers)
-    data = response.json()
-
-    return len(data["data"]["children"])
-
-
-def mastodon_mentions(query):
-
-    url = "https://mastodon.social/api/v2/search"
-
-    params = {
-        "q": query,
-        "type": "statuses"
-    }
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    if "statuses" in data:
-        return len(data["statuses"])
-
-    return 0
-
-
-def bluesky_mentions(query):
-
-    url = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
-
-    params = {
-        "q": query,
-        "limit": 50
-    }
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    if "posts" in data:
-        return len(data["posts"])
-
-    return 0
-
-
-def collect_city_symptom_data():
-
-    results = {}
-
-    for city in CITIES:
-
-        city_data = {}
-
-        for symptom in SYMPTOMS:
-
-            query = f"{symptom} {city}"
-
-            reddit_count = reddit_mentions(query)
-            mastodon_count = mastodon_mentions(query)
-            bluesky_count = bluesky_mentions(query)
-
-            city_data[symptom] = {
-                "reddit": reddit_count,
-                "mastodon": mastodon_count,
-                "bluesky": bluesky_count
-            }
-
-        results[city] = city_data
-
-    return results
-
-
-if __name__ == "__main__":
-
-    data = collect_city_symptom_data()
-
-    print(json.dumps(data, indent=4))
+def bluesky_mentions(query: str) -> int:
+    """Returns fabricated Bluesky mention count instantly."""
+    return MOCK_SOCIAL.get(query, {}).get("bluesky", 5)

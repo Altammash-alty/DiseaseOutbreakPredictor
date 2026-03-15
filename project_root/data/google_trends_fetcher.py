@@ -1,86 +1,24 @@
-from serpapi.google_search import GoogleSearch
-import json
-import time
+"""
+Fabricated Google Trends fetcher — returns instant mock data.
+Keeps the original predict.py import intact.
+"""
 
-# -------- API SECTION --------
-API_KEY = "c1432a00c275b9d2ca442f5a9dbec50d2cec8ac9651104750fed2ca301cef8c5"   # paste your SerpApi key here
-# -----------------------------
-
-SYMPTOMS = {
-    "fever": "fever symptoms",
-    "cough": "cough treatment",
-    "diarrhea": "diarrhea medicine",
-    "headache": "headache relief",
-    "nausea": "nausea symptoms"
+MOCK_TRENDS = {
+    "Mumbai":    {"fever": 380, "cough": 290, "diarrhea": 120},
+    "Delhi":     {"fever": 420, "cough": 310, "diarrhea": 95},
+    "Kolkata":   {"fever": 280, "cough": 180, "diarrhea": 340},
+    "Chennai":   {"fever": 190, "cough": 140, "diarrhea": 260},
+    "Bangalore": {"fever": 85,  "cough": 72,  "diarrhea": 40},
 }
 
-CITY_LOCATION = {
-    "Delhi": "Delhi, India",
-    "Meerut": "Meerut, India",
-    "Mumbai": "Mumbai, India",
-    "Bangalore": "Bangalore, India"
-}
-
-DEVICES = ["desktop", "mobile"]
-
-
-def get_results_count(data):
-    """
-    Extract total result count safely
-    """
-
-    if "search_information" in data:
-        info = data["search_information"]
-
-        if "total_results" in info:
-            return int(info["total_results"])
-
-    return 0
-
-
-def fetch_city_search_counts(city):
-
-    location = CITY_LOCATION[city]
-    results = {}
-
-    for symptom, query in SYMPTOMS.items():
-
-        device_counts = []
-
-        for device in DEVICES:
-
-            params = {
-                "engine": "google",
-                "q": query,
-                "location": location,
-                "hl": "en",
-                "gl": "in",
-                "tbs": "qdr:d",
-                "device": device,
-                "num": 10,
-                "api_key": API_KEY
-            }
-
-            search = GoogleSearch(params)
-            data = search.get_dict()
-
-            count = get_results_count(data)
-            device_counts.append(count)
-
-            time.sleep(3)  # delay to avoid unstable responses
-
-        results[symptom] = max(device_counts)
-
+def fetch_city_search_counts(city_name: str) -> dict:
+    """Returns fabricated Google Trends search counts instantly."""
+    data = MOCK_TRENDS.get(city_name, {"fever": 50, "cough": 40, "diarrhea": 30})
     return {
-        "city": city,
-        "past_24_hours_search_counts": results
+        "city": city_name,
+        "past_24_hours_search_counts": {
+            "fever symptoms": data["fever"],
+            "cough treatment": data["cough"],
+            "diarrhea medicine": data["diarrhea"],
+        }
     }
-
-
-if __name__ == "__main__":
-
-    city = "Delhi"
-
-    result = fetch_city_search_counts(city)
-
-    print(json.dumps(result, indent=4))

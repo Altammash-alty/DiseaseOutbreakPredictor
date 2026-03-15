@@ -1,42 +1,29 @@
-import tensorflow as tf
-import tensorflow_gnn as tfgnn
+import torch
+import torch.nn as nn
+from torch_geometric.nn import GCNConv
 
-class GNNSpatialModel(tf.keras.layers.Layer):
+class GNNSpatialModel(nn.Module):
     """
-    Graph Neural Network for regional spread modeling using TensorFlow-GNN.
+    Graph Neural Network for regional spread modeling using PyTorch Geometric.
     Nodes represent regions, and edges represent geographic/mobility links.
     """
-    def __init__(self, hidden_channels=64, **kwargs):
-        super(GNNSpatialModel, self).__init__(**kwargs)
-        self.conv1 = tfgnn.keras.layers.GraphUpdate(
-            node_sets={
-                "regions": tfgnn.keras.layers.NodeSetUpdate(
-                    {"edges": tfgnn.keras.layers.SimpleConvolution(
-                        tf.keras.layers.Dense(hidden_channels, activation="relu"),
-                        "sum"
-                    )},
-                    tfgnn.keras.layers.NextStateFromConcat(tf.keras.layers.Dense(hidden_channels))
-                )
-            }
-        )
-        self.conv2 = tfgnn.keras.layers.GraphUpdate(
-            node_sets={
-                "regions": tfgnn.keras.layers.NodeSetUpdate(
-                    {"edges": tfgnn.keras.layers.SimpleConvolution(
-                        tf.keras.layers.Dense(hidden_channels, activation="relu"),
-                        "sum"
-                    )},
-                    tfgnn.keras.layers.NextStateFromConcat(tf.keras.layers.Dense(hidden_channels))
-                )
-            }
-        )
+    def __init__(self, node_features, hidden_channels=64):
+        super(GNNSpatialModel, self).__init__()
+        self.conv1 = GCNConv(node_features, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, hidden_channels)
+        self.relu = nn.ReLU()
 
-    def call(self, graph):
+    def forward(self, x, edge_index):
         """
-        Inputs: tfgnn.GraphTensor
-        Outputs: Updated GraphTensor or specific node features
+        Inputs: 
+        - x: Node feature matrix [num_nodes, node_features]
+        - edge_index: Graph connectivity [2, num_edges]
+        
+        Outputs: Updated node features
         """
-        graph = self.conv1(graph)
-        graph = self.conv2(graph)
-        # Extract node features for the relevant regions
-        return graph.node_sets["regions"][tfgnn.HIDDEN_STATE]
+        x = self.conv1(x, edge_index)
+        x = self.relu(x)
+        x = self.conv2(x, edge_index)
+        x = self.relu(x)
+        
+        return x

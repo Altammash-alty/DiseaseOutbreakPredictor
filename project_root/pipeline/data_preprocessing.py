@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import tensorflow as tf
+import torch
 from transformers import BertTokenizer
 
 class DataProcessor:
@@ -20,9 +20,30 @@ class DataProcessor:
             padding="max_length",
             truncation=True,
             max_length=self.max_length,
-            return_tensors="tf"
+            return_tensors="pt"
         )
         return encoded['input_ids'], encoded['attention_mask']
+
+    def load_city_data(self, csv_path, config):
+        """
+        Loads and prepares real city-specific pharmacy data.
+        """
+        df = pd.read_csv(csv_path)
+        city_map = config['model_params']['city_mapping']
+        
+        # Filter for known cities in mapping
+        df = df[df['city'].isin(city_map.keys())].copy()
+        
+        # Map city names to IDs
+        df['region_id'] = df['city'].map(city_map)
+        
+        # Extract the pharmacy features defined in config
+        feature_cols = config['model_params']['pharmacy_feature_cols']
+        
+        # Convert to list format expected by the sliding widow logic
+        df['pharmacy_features'] = df[feature_cols].values.tolist()
+        
+        return df
 
     def create_sliding_windows(self, df, window_size=7):
         """
@@ -34,44 +55,47 @@ class DataProcessor:
         
         # Group by region to preserve temporal continuity
         for region, group in df.groupby("region_id"):
-            features = group.drop(["date", "region_id", "outbreak_label", "search_queries", "social_posts"], axis=1)
-            # Expand pharmacy_features if they are string-encoded
-            features = np.stack(group['pharmacy_features'].apply(lambda x: eval(x) if isinstance(x, str) else x))
+            # Ensure chronological order if date information is present
+            if 'date_index' in group.columns:
+                group = group.sort_values('date_index')
+            elif 'date' in group.columns:
+                group = group.sort_values('date')
+                
+            # Pharmacy features are usually the main temporal signal
+            features = np.stack(group['pharmacy_features'].values)
             
+            # Ensure labels exist (outbreak_label)
             labels = group["outbreak_label"].values
             
             for i in range(len(features) - window_size):
                 X_temporal.append(features[i : i + window_size])
                 y.append(labels[i + window_size])
-                
-        return np.array(X_temporal), np.array(y)
-
-    def build_graph_tensor(self, num_regions, adjacency_matrix=None):
-        """
-        Builds a TF-GNN GraphTensor.
-        In a real scenario, this would use geographic distances.
-        """
-        import tensorflow_gnn as tfgnn
         
-        # Create a simple ring graph or fully connected for synthetic demo
+        if len(X_temporal) == 0:
+            return torch.empty(0), torch.empty(0)
+            
+        return torch.tensor(np.array(X_temporal), dtype=torch.float32), torch.tensor(np.array(y), dtype=torch.float32)
+
+    def build_graph_data(self, num_regions):
+        """
+        Builds graph data for PyTorch Geometric.
+        Returns:
+        - x: Node features [num_nodes, feature_dim]
+        - edge_index: [2, num_edges]
+        """
+        # Node features (random initialization for demo)
+        x = torch.randn((num_regions, 64))
+        
+        # Create a simple ring graph
         source = []
         target = []
         for i in range(num_regions):
             source.append(i)
             target.append((i + 1) % num_regions)
+            # Make it undirected for demo
+            source.append((i + 1) % num_regions)
+            target.append(i)
             
-        return tfgnn.GraphTensor.from_pieces(
-            node_sets={
-                "regions": tfgnn.NodeSet.from_pieces(
-                    features={tfgnn.HIDDEN_STATE: tf.random.normal([num_regions, 64])}
-                )
-            },
-            edge_sets={
-                "edges": tfgnn.EdgeSet.from_pieces(
-                    adjacency=tfgnn.Adjacency.from_indices(
-                        source=("regions", tf.constant(source)),
-                        target=("regions", tf.constant(target))
-                    )
-                )
-            }
-        )
+        edge_index = torch.tensor([source, target], dtype=torch.long)
+        
+        return x, edge_index

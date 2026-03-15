@@ -1,0 +1,35 @@
+﻿--- Mumbai ---
+  fever_medicine_sales: val=520.0 avg=20.2 spike=24.56
+  cough_medicine_sales: val=13.0 avg=13.5 spike=0.90
+  diarrhea_medicine_sales: val=1.0 avg=15.6 spike=0.06
+  antibiotic_sales: val=9.0 avg=7.3 spike=1.08
+  painkiller_sales: val=26.0 avg=23.3 spike=1.07
+
+--- Delhi ---
+  fever_medicine_sales: val=21.0 avg=19.0 spike=1.05
+  cough_medicine_sales: val=15.0 avg=18.9 spike=0.75
+  diarrhea_medicine_sales: val=15.0 avg=12.7 spike=1.09
+  antibiotic_sales: val=6.0 avg=8.9 spike=0.61
+  painkiller_sales: val=22.0 avg=22.2 spike=0.95
+
+--- Bangalore ---
+  fever_medicine_sales: val=356.0 avg=19.6 spike=17.24
+  cough_medicine_sales: val=37.0 avg=24.4 spike=1.46
+  diarrhea_medicine_sales: val=20.0 avg=16.9 spike=1.12
+  antibiotic_sales: val=8.0 avg=9.4 spike=0.77
+  painkiller_sales: val=27.0 avg=24.9 spike=1.04
+
+--- Chennai ---
+  fever_medicine_sales: val=23.0 avg=17.6 spike=1.24
+  cough_medicine_sales: val=32.0 avg=19.4 spike=1.57
+  diarrhea_medicine_sales: val=15.0 avg=13.5 spike=1.04
+  antibiotic_sales: val=7.0 avg=10.4 spike=0.62
+  painkiller_sales: val=24.0 avg=22.9 spike=1.00
+
+--- Kolkata ---
+  fever_medicine_sales: val=24.0 avg=20.0 spike=1.14
+  cough_medicine_sales: val=12.0 avg=17.8 spike=0.64
+  diarrhea_medicine_sales: val=17.0 avg=13.4 spike=1.18
+  antibiotic_sales: val=7.0 avg=7.8 spike=0.80
+  painkiller_sales: val=23.0 avg=22.1 spike=1.00
+

@@ -1,32 +1,28 @@
-import tensorflow as tf
-from transformers import BertTokenizer, TFBertModel
-import numpy as np
+import torch
+import torch.nn as nn
+from transformers import BertTokenizer, BertModel
 
-class BertEncoder(tf.keras.layers.Layer):
+class BertEncoder(nn.Module):
     """
     BERT layer for extracting semantic embeddings from search queries and social posts.
     """
-    def __init__(self, model_name="bert-base-uncased", **kwargs):
-        super(BertEncoder, self).__init__(**kwargs)
+    def __init__(self, model_name="bert-base-uncased"):
+        super(BertEncoder, self).__init__()
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
-        self.bert = TFBertModel.from_pretrained(model_name)
-        self.bert.trainable = False # Keep BERT frozen initially for efficiency
+        self.bert = BertModel.from_pretrained(model_name)
+        # Keep BERT frozen initially for efficiency
+        for param in self.bert.parameters():
+            param.requires_grad = False
 
-    def call(self, inputs):
+    def forward(self, input_ids, attention_mask):
         """
-        Expects a batch of strings. 
-        Note: In a pure Keras graph, we usually handle tokenization outside 
-        or use a specific TF-op based tokenizer.
+        Expects input_ids and attention_mask tensors.
         """
-        # Bert processing typically happens in a preprocessing pipeline
-        # or via custom training loops. Here we define the BERT architecture.
-        # This layer expects input_ids, attention_mask
-        input_ids, attention_mask = inputs
         outputs = self.bert(input_ids, attention_mask=attention_mask)
         # Use pooled output (CLS token representation)
         return outputs.pooler_output
 
-def get_bert_embeddings(texts, tokenizer, model, max_length=128):
+def get_bert_embeddings(texts, tokenizer, model, max_length=128, device='cpu'):
     """
     Helper function to generate embeddings for a list of texts.
     """
@@ -35,8 +31,11 @@ def get_bert_embeddings(texts, tokenizer, model, max_length=128):
         padding=True, 
         truncation=True, 
         max_length=max_length, 
-        return_tensors="tf"
-    )
-    outputs = model(encoded['input_ids'], attention_mask=encoded['attention_mask'])
+        return_tensors="pt"
+    ).to(device)
+    
+    with torch.no_grad():
+        outputs = model(encoded['input_ids'], attention_mask=encoded['attention_mask'])
+    
     # Average the embeddings if multiple texts are provided
-    return tf.reduce_mean(outputs.pooler_output, axis=0)
+    return torch.mean(outputs.pooler_output, dim=0)
