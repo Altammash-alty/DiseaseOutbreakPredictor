@@ -1,19 +1,41 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from data.city_data import CITIES
+from data.disease_data import DISEASE_PRECAUTIONS
+from service.model_service import predict_city_diseases
+from service.heatmap_service import generate_heatmap
 
-from inference.predict import predict_outbreak
+app = FastAPI(title="Disease Outbreak API")
 
-app = FastAPI()
 
-class CityRequest(BaseModel):
-    city: str
+@app.get("/outbreak")
+def get_outbreak():
 
-@app.post("/predict")
-def predict(city_request: CityRequest):
+    cities_output = []
 
-    result = predict_outbreak(city_request.city)
+    for city, coord in CITIES.items():
+
+        predictions = predict_city_diseases(city)
+
+        diseases = []
+
+        for p in predictions:
+
+            diseases.append({
+                "name": p["name"],
+                "probability": p["probability"],
+                "precautions": DISEASE_PRECAUTIONS[p["name"]]
+            })
+
+        cities_output.append({
+            "city": city,
+            "lat": coord["lat"],
+            "lng": coord["lng"],
+            "diseases": diseases
+        })
+
+    heatmap = generate_heatmap(cities_output)
 
     return {
-        "city": city_request.city,
-        "diseases": result
+        "cities": cities_output,
+        "heatmap": heatmap
     }
