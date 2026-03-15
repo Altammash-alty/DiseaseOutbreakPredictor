@@ -24,6 +24,27 @@ class DataProcessor:
         )
         return encoded['input_ids'], encoded['attention_mask']
 
+    def load_city_data(self, csv_path, config):
+        """
+        Loads and prepares real city-specific pharmacy data.
+        """
+        df = pd.read_csv(csv_path)
+        city_map = config['model_params']['city_mapping']
+        
+        # Filter for known cities in mapping
+        df = df[df['city'].isin(city_map.keys())].copy()
+        
+        # Map city names to IDs
+        df['region_id'] = df['city'].map(city_map)
+        
+        # Extract the pharmacy features defined in config
+        feature_cols = config['model_params']['pharmacy_feature_cols']
+        
+        # Convert to list format expected by the sliding widow logic
+        df['pharmacy_features'] = df[feature_cols].values.tolist()
+        
+        return df
+
     def create_sliding_windows(self, df, window_size=7):
         """
         Creates temporal windows for LSTM.
@@ -34,15 +55,25 @@ class DataProcessor:
         
         # Group by region to preserve temporal continuity
         for region, group in df.groupby("region_id"):
+            # Ensure chronological order if date information is present
+            if 'date_index' in group.columns:
+                group = group.sort_values('date_index')
+            elif 'date' in group.columns:
+                group = group.sort_values('date')
+                
             # Pharmacy features are usually the main temporal signal
-            features = np.stack(group['pharmacy_features'].apply(lambda x: eval(x) if isinstance(x, str) else x))
+            features = np.stack(group['pharmacy_features'].values)
             
+            # Ensure labels exist (outbreak_label)
             labels = group["outbreak_label"].values
             
             for i in range(len(features) - window_size):
                 X_temporal.append(features[i : i + window_size])
                 y.append(labels[i + window_size])
-                
+        
+        if len(X_temporal) == 0:
+            return torch.empty(0), torch.empty(0)
+            
         return torch.tensor(np.array(X_temporal), dtype=torch.float32), torch.tensor(np.array(y), dtype=torch.float32)
 
     def build_graph_data(self, num_regions):
