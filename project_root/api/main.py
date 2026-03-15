@@ -38,5 +38,20 @@ def predict(city_request: CityRequest):
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/all_predictions")
+def get_all_predictions():
+    """
+    Returns predictions for all cities defined in the config mapping.
+    """
+    from project_root.inference.predict import config
+    cities = list(config['model_params'].get('city_mapping', {}).keys())
+    results = {}
+    for city in cities:
+        try:
+            results[city] = predict_outbreak(city)
+        except:
+            results[city] = {"error": "Failed to fetch"}
+    return results
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
