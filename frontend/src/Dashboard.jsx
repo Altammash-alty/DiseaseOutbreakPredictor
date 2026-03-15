@@ -512,7 +512,7 @@ export default function App() {
   const wx=sel?WEATHER[sel.name]:null;
   const hosp=sel?HOSPITALS[sel.name]:null;
   const ai=sel?AI_TEXT[sel.name]:null;
-  const critical=CITIES.filter(c=>c.risk>=70).sort((a,b)=>b.risk-a.risk);
+  const critical=cities.filter(c=>c.risk>=70).sort((a,b)=>b.risk-a.risk);
 
   return (
     <div style={{background:"transparent",minHeight:"100vh",color:TXT,fontFamily:"'DM Sans',sans-serif",overflowX:"hidden",position:"relative"}}>
@@ -561,7 +561,7 @@ export default function App() {
           <span style={{fontSize:10,...mono,color:MUT,background:SURF,border:`1px solid ${BOR}`,borderRadius:4,padding:"2px 8px"}}>🇮🇳 India Surveillance</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
-          <span style={{fontSize:10,color:MUT,...mono}}>{CITIES.length} cities · {critical.length} critical</span>
+          <span style={{fontSize:10,color:MUT,...mono}}>{cities.length} cities · {critical.length} critical</span>
           <div style={{position:"relative"}}>
             <button onClick={()=>setNotifOpen(p=>!p)} style={{background:SURF,border:`1px solid ${BOR}`,borderRadius:6,padding:"5px 10px",color:TXT,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",gap:5}}>
               🔔
@@ -599,7 +599,7 @@ export default function App() {
             <div style={{fontSize:10,color:MUT}}>5 major cities tracked</div>
           </div>
           <div style={{flex:1,overflowY:"auto"}}>
-            {[...CITIES].sort((a,b)=>b.risk-a.risk).map((c,i)=>(
+            {[...cities].sort((a,b)=>b.risk-a.risk).map((c,i)=>(
               <div key={c.id} className={`crow${sel?.id===c.id?" sel":""}`} onClick={()=>{setSel(c);setTab("overview");}} style={{animation:`slideRight 0.35s ${i*0.07}s ease both`}}>
                 {c.risk>=70
                   ? <PulseRing color={RC(c.risk)} size={7}/>
@@ -621,15 +621,15 @@ export default function App() {
             <div style={{fontSize:9,...mono,color:MUT,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>National Summary</div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
               <div style={{textAlign:"center"}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#e53e3e",...mono}}>{CITIES.filter(c=>c.risk>=70).length}</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#e53e3e",...mono}}>{cities.filter(c=>c.risk>=70).length}</div>
                 <div style={{fontSize:8,color:MUT}}>Critical</div>
               </div>
               <div style={{textAlign:"center"}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#d97706",...mono}}>{CITIES.filter(c=>c.risk>=45&&c.risk<70).length}</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#d97706",...mono}}>{cities.filter(c=>c.risk>=45&&c.risk<70).length}</div>
                 <div style={{fontSize:8,color:MUT}}>Elevated</div>
               </div>
               <div style={{textAlign:"center"}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#7c5cbf",...mono}}>{CITIES.filter(c=>c.risk<45).length}</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#7c5cbf",...mono}}>{cities.filter(c=>c.risk<45).length}</div>
                 <div style={{fontSize:8,color:MUT}}>Low</div>
               </div>
             </div>
@@ -656,7 +656,7 @@ export default function App() {
                 ))}
               </div>
               <div style={{height:310,background:"radial-gradient(ellipse at 50% 50%, #1e3a52 0%, #0d1f2d 70%)"}}>
-                <RealisticGlobe cities={CITIES} selected={sel} onPick={c=>{setSel(c);setTab("overview");}}/>
+                <RealisticGlobe cities={cities} selected={sel} onPick={c=>{setSel(c);setTab("overview");}}/>
               </div>
               {!sel&&(
                 <div style={{position:"absolute",bottom:12,left:"50%",transform:"translateX(-50%)",pointerEvents:"none"}}>
@@ -847,10 +847,10 @@ export default function App() {
             <div style={lbl}>System Overview</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
               {[
-                {label:"Monitored",val:CITIES.length,col:ACC},
-                {label:"Critical",val:CITIES.filter(c=>c.risk>=70).length,col:"#e53e3e"},
-                {label:"Elevated",val:CITIES.filter(c=>c.risk>=45&&c.risk<70).length,col:"#d97706"},
-                {label:"Low Risk",val:CITIES.filter(c=>c.risk<45).length,col:"#7c5cbf"},
+                {label:"Monitored",val:cities.length,col:ACC},
+                {label:"Critical",val:cities.filter(c=>c.risk>=70).length,col:"#e53e3e"},
+                {label:"Elevated",val:cities.filter(c=>c.risk>=45&&c.risk<70).length,col:"#d97706"},
+                {label:"Low Risk",val:cities.filter(c=>c.risk<45).length,col:"#7c5cbf"},
               ].map((s,si)=>(
                 <div key={s.label} style={{background:SURF2,borderRadius:8,padding:"9px 11px",border:`1px solid ${BOR}`,animation:`slideUp 0.4s ${si*0.07}s ease both`,transition:"all 0.2s",cursor:"default"}}
                   onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 14px rgba(124,92,191,0.12)";}}
@@ -906,13 +906,13 @@ export default function App() {
 
           <div>
             <div style={lbl}>Disease Distribution</div>
-            {Object.entries(CITIES.reduce((a,c)=>{a[c.disease]=(a[c.disease]||0)+1;return a;},{})).sort(([,a],[,b])=>b-a).map(([d,n],di)=>(
+            {Object.entries(cities.reduce((a,c)=>{a[c.disease]=(a[c.disease]||0)+1;return a;},{})).sort(([,a],[,b])=>b-a).map(([d,n],di)=>(
               <div key={d} style={{marginBottom:8,animation:`slideRight 0.4s ${0.1+di*0.08}s ease both`}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                   <span style={{fontSize:10,color:MUT}}>{d}</span>
                   <span style={{fontSize:10,...mono,color:MUT}}>{n} city</span>
                 </div>
-                <AnimatedRiskBar risk={(n/CITIES.length)*100} delay={300+di*60}/>
+                <AnimatedRiskBar risk={(n/cities.length)*100} delay={300+di*60}/>
               </div>
             ))}
           </div>
