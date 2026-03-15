@@ -565,8 +565,48 @@ function DashboardBg() {
 }
 
 // ─── App ─────────────────────────────────────────────────────────────────────
+const CITIES_INIT = [
+  { id:1,  name:"Mumbai",      country:"India",       lat:19.08,  lng:72.88,   risk:0, disease:"...",  healthIndex:100 },
+  { id:2,  name:"Delhi",       country:"India",       lat:28.61,  lng:77.20,   risk:0, disease:"...",  healthIndex:100 },
+  { id:3,  name:"Bangalore",   country:"India",       lat:12.97,  lng:77.59,   risk:0, disease:"...",  healthIndex:100 },
+  { id:4,  name:"Chennai",     country:"India",       lat:13.08,  lng:80.27,   risk:0, disease:"...",  healthIndex:100 },
+  { id:5,  name:"Kolkata",     country:"India",       lat:22.57,  lng:88.36,   risk:0, disease:"...",  healthIndex:100 },
+];
+
 export default function App() {
+  const [cities, setCities] = useState(CITIES_INIT);
   const [sel, setSel] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/all_predictions");
+        const data = await response.json();
+        
+        const updatedCities = CITIES_INIT.map(city => {
+          if (data[city.name]) {
+            return { 
+              ...city, 
+              ...data[city.name],
+              id: city.id // Preserve original ID
+            };
+          }
+          return city;
+        });
+        
+        setCities(updatedCities);
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to load live data", err);
+        setLoading(false);
+      }
+    };
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 300000); // Refresh every 5 mins
+    return () => clearInterval(interval);
+  }, []);
+
   const [tab, setTab] = useState("overview");
   const [notifOpen, setNotifOpen] = useState(false);
   const mono = { fontFamily:"'Space Mono',monospace" };
@@ -575,12 +615,13 @@ export default function App() {
   const card = { background:SURF2, border:`1px solid ${BOR}`, borderRadius:10, padding:"13px 15px" };
   const lbl  = { fontSize:9, ...mono, color:ACC, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:8 };
 
-  const notifs=[
-    {id:1,city:"Dhaka",   msg:"Cholera cases up 62% — CRITICAL",time:"2m", col:"#e53e3e"},
-    {id:2,city:"Mumbai",  msg:"Dengue rising — monsoon peak",    time:"9m", col:"#e53e3e"},
-    {id:3,city:"Karachi", msg:"Water contamination — HIGH risk", time:"24m",col:"#d97706"},
-    {id:4,city:"Manila",  msg:"DENV-3 serotype detected",        time:"42m",col:"#d97706"},
-  ];
+  const notifs = cities.filter(c => c.risk > 70).map((c, i) => ({
+    id: i,
+    city: c.name,
+    msg: `${c.disease} Alert - ${c.risk}% Risk`,
+    time: "Live",
+    col: "#e53e3e"
+  }));
 
   const forecast=sel?seed7(sel.risk):null;
   const di=sel?DISEASE_INFO[sel.disease]:null;

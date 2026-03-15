@@ -80,12 +80,16 @@ def train():
         for batch_x, batch_y in dataloader:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
             
+            # Neutral dummy BERT inputs for training (since CSV has no text)
+            dummy_ids = torch.zeros((batch_x.size(0), 128), dtype=torch.long).to(device)
+            dummy_mask = torch.zeros((batch_x.size(0), 128), dtype=torch.long).to(device)
+            
             optimizer.zero_grad()
             
             # Forward pass
-            outputs = model(batch_x, x_gnn, edge_index).squeeze()
+            outputs = model(batch_x, x_gnn, edge_index, dummy_ids, dummy_mask).squeeze()
             
-            # Handle cases where batch_size is 1 (squeeze might remove batch dim if not careful)
+            # Handle cases where batch_size is 1
             if outputs.dim() == 0:
                 outputs = outputs.unsqueeze(0)
                 
@@ -98,7 +102,7 @@ def train():
             epoch_loss += loss.item()
             predicted = (outputs > 0.5).float()
             total += batch_y.size(0)
-            correct += (predicted == batch_y).float().sum().item()
+            correct += torch.eq(predicted, batch_y).float().sum().item()
             
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {epoch_loss/len(dataloader):.4f}, Acc: {100*correct/total:.2f}%")
 

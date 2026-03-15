@@ -112,19 +112,23 @@ def predict_outbreak(city_name):
     # 3. Get Historical Pharmacy Features (LSTM Input)
     real_data_path = config['paths'].get('real_data', "project_root/data/real_pharmacy_data.csv")
     if not os.path.isabs(real_data_path):
-         real_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", real_data_path))
+         real_data_path = os.path.join(os.getcwd(), real_data_path)
 
-    pharmacy_features = [0]*config['model_params']['lstm_input_dim']
-    primary_disease = "Unknown"
+    pharmacy_features = [1]*config['model_params']['lstm_input_dim'] # Initialize with baselines
+    primary_disease = "Healthy"
     
     if os.path.exists(real_data_path):
         df = pd.read_csv(real_data_path)
         city_data = df[df['city'] == city_name]
         if not city_data.empty:
-            latest = city_data.sort_values('date_index', ascending=False).iloc[0]
+            # Take the very last record for this city (most recent)
+            latest = city_data.iloc[-1]
             feature_cols = config['model_params']['pharmacy_feature_cols']
             pharmacy_features = latest[feature_cols].values.tolist()
             
+            print(f"  [MODEL] Read real data for {city_name} from {os.path.basename(real_data_path)}")
+            print(f"  [DATA] Last recorded sales: {dict(zip(feature_cols, pharmacy_features))}")
+
             # Heuristic for disease type based on highest sales spike
             fever = latest['fever_medicine_sales']
             cough = latest['cough_medicine_sales']
@@ -132,13 +136,15 @@ def predict_outbreak(city_name):
             
             if diarrhea > fever and diarrhea > cough: primary_disease = "Cholera/Typhoid"
             elif cough > fever: primary_disease = "Influenza/COVID-19"
-            else: primary_disease = "Dengue/Malaria"
+            elif fever > 20 or cough > 20 or diarrhea > 20: primary_disease = "Dengue/Malaria"
+            else: primary_disease = "Minimal Risk"
 
     # 4. Prepare Tensors
     input_ids, attention_mask = PROCESSOR.preprocess_text(live_text)
     input_ids, attention_mask = input_ids.to(DEVICE), attention_mask.to(DEVICE)
     
     window_size = config['model_params']['temporal_window']
+    # Create a temporal sequence by duplicating the latest record (simple inference fallback)
     temporal_input = np.tile(pharmacy_features, (1, window_size, 1)).astype(np.float32)
     temporal_input = torch.tensor(temporal_input).to(DEVICE)
     
@@ -162,10 +168,11 @@ def predict_outbreak(city_name):
         
     return {
         "city": city_name,
-        "outbreak_probability": risk_score,
+        "name": city_name, # Dashboard uses 'name'
+        "risk": risk_score,
         "risk_level": risk_level,
-        "health_index": max(0, 100 - int(risk_score)),
-        "primary_disease": primary_disease,
+        "healthIndex": max(0, 100 - int(risk_score)),
+        "disease": primary_disease,
         "live_signals": live_text,
         "region_id": region_id,
         "timestamp": int(latest['date_index']) if 'latest' in locals() else 0
